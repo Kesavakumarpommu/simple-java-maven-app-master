@@ -72,7 +72,131 @@ pipeline {
       <username>admin</username>
       <password>admin</password>
     </server>
+  </servers>pipeline {
+    agent any
+    
+    environment {
+        // Points to the local JDK 21 installation path on Windows
+        JAVA_HOME = 'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot'
+        
+        // Adds Java compiler and runtime tools to system PATH
+        PATH = "${JAVA_HOME}\\bin;${env.PATH}"
+        
+        // Configuration URLs for external DevOps servers
+        SONARQUBE_URL = "http://localhost:9000"
+        NEXUS_URL     = "http://localhost:8081"
+    }
+    
+    options {
+        // Stops subsequent stages if any stage fails or becomes unstable
+        skipStagesAfterUnstable()
+    }
+    
+    stages {
+        // -------------------------------------------------------------
+        // STAGE 1: CHECKOUT
+        // -------------------------------------------------------------
+        stage('Checkout') {
+            steps {
+                // Clones the source code repository from GitHub
+                git branch: 'master',
+                    url: 'https://github.com/skillupwithsachin/simple-java-maven-app.git'
+            }
+        }
+        
+        // -------------------------------------------------------------
+        // STAGE 2: BUILD
+        // -------------------------------------------------------------
+        stage('Build') {
+            steps {
+                // Compiles code and generates target/my-app-1.0-SNAPSHOT.jar without running tests yet
+                bat 'mvn -B -DskipTests clean package'
+            }
+        }
+        
+        // -------------------------------------------------------------
+        // STAGE 3: TEST
+        // -------------------------------------------------------------
+        stage('Test') {
+            steps {
+                // Runs automated JUnit unit test cases
+                bat 'mvn test'
+            }
+            post {
+                always {
+                    // Publishes JUnit test reports onto Jenkins test dashboard
+                    junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // =============================================================
+        // STAGE 4: SONARQUBE ANALYSIS (COMMENTED OUT)
+        // Purpose: Static Application Security Testing (SAST) & Code Quality
+        // =============================================================
+        /*
+        stage('SonarQube Analysis') {
+            steps {
+                // 'withCredentials' securely retrieves the SonarQube secret token from Jenkins Credentials
+                // store without exposing the token in plain text inside logs or source control.
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    
+                    // Runs the Maven Sonar plugin to scan the source code:
+                    // -Dsonar.projectKey : Unique project identifier inside SonarQube
+                    // -Dsonar.host.url   : URL pointing to the running SonarQube server
+                    // -Dsonar.login      : Secure authentication token passed via the variable
+                    bat "mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.login=${SONAR_TOKEN}"
+                }
+            }
+        }
+        */
+
+        // =============================================================
+        // STAGE 5: UPLOAD TO NEXUS (COMMENTED OUT)
+        // Purpose: Artifact Repository Management (Storing built .jar versions)
+        // =============================================================
+        /*
+        stage('Upload to Nexus') {
+            steps {
+                // Step A: Dynamically generate Maven 'settings.xml' on Windows using PowerShell.
+                // This file contains the username and password required to authenticate with Nexus.
+                powershell '''
+                    $xml = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <servers>
+    <server>
+      <id>nexus</id>
+      <username>admin</username>
+      <password>admin</password>
+    </server>
   </servers>
+</settings>
+"@
+                    // Writes the XML content directly into settings.xml in current workspace
+                    Set-Content -Path settings.xml -Value $xml
+                '''
+                
+                // Step B: Deploy the built JAR artifact to the Nexus snapshot repository:
+                // -DskipTests             : Avoids re-running tests during upload
+                // -s settings.xml         : Uses the custom settings file with credentials
+                // -DaltDeploymentRepository: Overrides default pom.xml target URL with the Nexus repository URL
+                bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::default::http://52.90.103.249:8081/repository/maven-snapshots/'
+            }
+        }
+        */
+
+        // -------------------------------------------------------------
+        // STAGE 6: DELIVER
+        // -------------------------------------------------------------
+        stage('Deliver') { 
+            steps {
+                // Verifies deployment by running the final standalone JAR file
+                bat 'java -jar target\\my-app-1.0-SNAPSHOT.jar'
+            }
+        }
+    }
+}
 </settings>
 "@
                     Set-Content -Path settings.xml -Value $xml
