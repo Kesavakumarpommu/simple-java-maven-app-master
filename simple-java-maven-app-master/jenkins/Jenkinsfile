@@ -2,14 +2,13 @@ pipeline {
     agent any
     
     environment {
-        // Updated to typical Windows installation paths. Adjust if your Java/Maven paths are different.
-        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21' 
-        MAVEN_HOME = 'C:\\Program Files\\Maven'
+        // Set to your actual Adoptium JDK path
+        JAVA_HOME = 'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot'
         
-        // Appending Maven and Java to the Windows system Path
-        PATH = "${MAVEN_HOME}\\bin;${JAVA_HOME}\\bin;${env.PATH}"
+        // Add JAVA_HOME to PATH
+        PATH = "${JAVA_HOME}\\bin;${env.PATH}"
         
-        // Nexus Configuration
+        // Nexus & SonarQube Configuration
         NEXUS_URL = "http://52.90.103.249:8081"
         NEXUS_CREDENTIAL_ID = "nexus-credentials"
         SONARQUBE_URL = "http://52.90.103.249:9000"
@@ -39,7 +38,7 @@ pipeline {
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
                 }
             }
         }
@@ -48,11 +47,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                     bat """
-                        mvn sonar:sonar ^
-                        -Dsonar.projectKey=simple-java-maven-app ^
-                        -Dsonar.projectName="Simple Java Maven App" ^
-                        -Dsonar.host.url=${SONARQUBE_URL} ^
-                        -Dsonar.token=${SONAR_TOKEN}
+                        mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.projectName="Simple Java Maven App" -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.token=${SONAR_TOKEN}
                     """
                 }
             }
@@ -60,7 +55,7 @@ pipeline {
         
         stage('Upload to Nexus') {
             steps {
-                // Using PowerShell to safely create the settings.xml file on Windows
+                // Using PowerShell to safely create settings.xml on Windows
                 powershell '''
                     $xml = @"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -78,13 +73,12 @@ pipeline {
                 '''
                 
                 // Deploying to Nexus via Windows batch
-                bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::http://52.90.103.249:8081/repository/maven-snapshots/'
+                bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::default::http://52.90.103.249:8081/repository/maven-snapshots/'
             }
         }
         
         stage('Deliver') { 
             steps {
-                // Running the delivery script via Windows batch
                 bat 'cmd /c jenkins\\scripts\\deliver.bat' 
             }
         }
