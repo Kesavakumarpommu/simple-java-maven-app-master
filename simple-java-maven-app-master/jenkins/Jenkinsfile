@@ -61,26 +61,26 @@ pipeline {
         // =========================================================
         // STAGE 4: SONARQUBE ANALYSIS (OPTIONAL / COMMENTED)
         // =========================================================
-        // stage('SonarQube Analysis') {
-        //     steps {
-        //         dir('simple-java-maven-app-master') {
-        //             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-        //                 bat "mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=%SONAR_TOKEN%"
-        //             }
-        //         }
-        //     }
-        // }
+        stage('SonarQube Analysis') {
+            steps {
+                dir('simple-java-maven-app-master') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        bat "mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=%SONAR_TOKEN%"
+                    }
+                }
+            }
+        }
 
         // =========================================================
         // STAGE 5: UPLOAD TO NEXUS (OPTIONAL / COMMENTED)
         // =========================================================
-        // stage('Upload to Nexus') {
-        //     steps {
-        //         dir('simple-java-maven-app-master') {
-        //             bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::default::http://localhost:8081/repository/maven-snapshots/'
-        //         }
-        //     }
-        // }
+        stage('Upload to Nexus') {
+            steps {
+                dir('simple-java-maven-app-master') {
+                    bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::default::http://localhost:8081/repository/maven-snapshots/'
+                }
+            }
+        }
         
         // =========================================================
         // STAGE 6: DELIVER
