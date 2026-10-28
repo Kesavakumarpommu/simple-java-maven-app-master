@@ -23,8 +23,8 @@ pipeline {
         // =========================================================
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Kesavakumarpommu/simple-java-maven-app-master.git'
+                git branch: 'master',
+                    url: 'https://github.com/skillupwithsachin/simple-java-maven-app.git'
             }
         }
         
