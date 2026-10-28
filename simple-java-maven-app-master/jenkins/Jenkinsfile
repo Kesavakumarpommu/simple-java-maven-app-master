@@ -58,14 +58,14 @@ pipeline {
             }
         }
 
-        // =========================================================
-        // STAGE 4: SONARQUBE ANALYSIS (OPTIONAL / COMMENTED)
+       // =========================================================
+        // STAGE 4: SONARQUBE ANALYSIS
         // =========================================================
         stage('SonarQube Analysis') {
             steps {
                 dir('simple-java-maven-app-master') {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                        bat "mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=%SONAR_TOKEN%"
+                        bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=http://localhost:9000 -Dsonar.token=%SONAR_TOKEN%'
                     }
                 }
             }
