@@ -3,7 +3,7 @@ pipeline {
     
     // Environment variables used throughout the pipeline
     environment {
-        // Absolute path to the JDK 21 installation on this Windows machine
+        // Absolute path to JDK on your Windows machine
         JAVA_HOME = 'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot'
         
         // Adds Java compiler and tools to the execution PATH
@@ -19,12 +19,11 @@ pipeline {
     stages {
         // =========================================================
         // STAGE 1: CHECKOUT
-        // Clones the application source code from GitHub
+        // Automatically checks out YOUR GitHub repository
         // =========================================================
         stage('Checkout') {
             steps {
-                git branch: 'master',
-                    url: 'https://github.com/skillupwithsachin/simple-java-maven-app.git'
+                checkout scm
             }
         }
         
@@ -34,7 +33,10 @@ pipeline {
         // =========================================================
         stage('Build') {
             steps {
-                bat 'mvn -B -DskipTests clean package'
+                // Navigate into your project folder where pom.xml is located
+                dir('simple-java-maven-app-master') {
+                    bat 'mvn -B -DskipTests clean package'
+                }
             }
         }
         
@@ -44,35 +46,39 @@ pipeline {
         // =========================================================
         stage('Test') {
             steps {
-                bat 'mvn test'
+                dir('simple-java-maven-app-master') {
+                    bat 'mvn test'
+                }
             }
             post {
                 always {
                     // Publishes test report graphs on Jenkins
-                    junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                 }
             }
         }
 
         // =========================================================
         // STAGE 4: SONARQUBE ANALYSIS (OPTIONAL / COMMENTED)
-        // Purpose: Static Code Analysis & Vulnerability Scanning
         // =========================================================
         // stage('SonarQube Analysis') {
         //     steps {
-        //         withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-        //             bat "mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=%SONAR_TOKEN%"
+        //         dir('simple-java-maven-app-master') {
+        //             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+        //                 bat "mvn sonar:sonar -Dsonar.projectKey=simple-java-maven-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=%SONAR_TOKEN%"
+        //             }
         //         }
         //     }
         // }
 
         // =========================================================
         // STAGE 5: UPLOAD TO NEXUS (OPTIONAL / COMMENTED)
-        // Purpose: Artifact Repository Management
         // =========================================================
         // stage('Upload to Nexus') {
         //     steps {
-        //         bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::default::http://localhost:8081/repository/maven-snapshots/'
+        //         dir('simple-java-maven-app-master') {
+        //             bat 'mvn deploy -DskipTests -s settings.xml -DaltDeploymentRepository=nexus::default::http://localhost:8081/repository/maven-snapshots/'
+        //         }
         //     }
         // }
         
@@ -82,7 +88,9 @@ pipeline {
         // =========================================================
         stage('Deliver') { 
             steps {
-                bat 'java -jar target\\my-app-1.0-SNAPSHOT.jar'
+                dir('simple-java-maven-app-master') {
+                    bat 'java -jar target\\my-app-1.0-SNAPSHOT.jar'
+                }
             }
         }
     }
